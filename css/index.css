@@ -1,0 +1,39 @@
+body {
+    background-color: gray;
+    width: 100%;
+}
+
+#board {
+    padding-top: 8vh;
+    margin:auto;
+    width: 480px;
+}
+
+.piece-box {
+    height: 60px;
+    width: 60px;
+}
+
+.black-box {
+    background-color: brown;
+}
+
+.white-box {
+    background-color: pink;
+}
+
+.viable {
+    background-color: rgba(0, 255, 0, 0.288);
+}
+
+.row {
+    display: flex;
+}
+
+.piece:hover {
+    background-color: rgba(255, 187, 0, 0.5);
+}
+
+p {
+    font-size: 30px;
+}
