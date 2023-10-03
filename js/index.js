@@ -39,7 +39,7 @@ function gen() {
     }
 
     let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR";
-    //let fen = "8/8/8/3Q4/4q3/8/8/8";
+    //let fen = "8/8/8/3N4/4n3/8/8/8";
     let x = 0;
     let y = 0;
 
@@ -174,6 +174,7 @@ let old = "";
 let select = false;
 let turn = "White";
 let highlighted = [];
+let passant = [];
 
 function selectPiece() {
     let t = event.srcElement;
@@ -185,6 +186,12 @@ function selectPiece() {
             }
 
             highlighted = [];
+
+            for (let n = 0; n < passant.length; n++) {
+                document.getElementById(passant[n]).className = document.getElementById(passant[n]).className.substring(0, 19);
+            }
+            
+            passant = [];
 
             old = "";
             select = false;
@@ -222,6 +229,19 @@ function selectPiece() {
     }
 }
 
+const movementTypes = {"P" :  'pawnMovement',
+                            "p" :  'pawnMovement',
+                            "R" : 'rookMovement',
+                            "r" : 'rookMovement',
+                            "B" : 'bishopMovement',
+                            "b" : 'bishopMovement',
+                            "Q" : 'queenMovement',
+                            "q" : 'queenMovement',
+                            "K" : 'kingMovement',
+                            "k" : 'kingMovement',
+                            'N' : 'knightMovement',
+                            'n' : 'knightMovement'};
+
 function pieceHandeler(ls, t) {
     if (ls.includes(t.id.charAt(0))) {
         for (let n = 0; n < highlighted.length; n++) {
@@ -230,18 +250,16 @@ function pieceHandeler(ls, t) {
 
         highlighted = [];
 
+        for (let n = 0; n < passant.length; n++) {
+            document.getElementById(passant[n]).className = document.getElementById(passant[n]).className.substring(0, 19);
+        }
+        
+        passant = [];
+
         old = t;
         select = true;
 
-        (t.id.charAt(0) == "P") ? pawnMovement(1, t) : null; //pawn
-        (t.id.charAt(0) == "R") ? rookMovement(t) : null; // rook
-        (t.id.charAt(0) == "B") ? bishopMovement(t) : null; // bishop
-        (t.id.charAt(0) =="Q") ? queenMovement(t) : null; // queen
-
-        (t.id.charAt(0) == "p") ? pawnMovement(-1, t) : null; //pawn
-        (t.id.charAt(0) == "r") ? rookMovement(t) : null; // rook
-        (t.id.charAt(0) == "b") ? bishopMovement(t) : null; // bishop
-        (t.id.charAt(0) =="q") ? queenMovement(t) : null; // queen
+        window[movementTypes[t.id.charAt(0)]](t);
     }
 }
 
@@ -249,30 +267,139 @@ function move() {
     if (select==true & highlighted.length > 0) {
         var info = event.srcElement;
         
-        if (info.id.substr(1) != old.id.substr(1) & highlighted.includes(info.id)) {
-            info.appendChild(old);
-            old.id = old.id.charAt(0) + info.id;
+        if (info.id.substr(1) != old.id.substr(1)) {
+            if (highlighted.includes(info.id)) {
+                info.appendChild(old);
 
-            if (turn == "White") { //White
-                turn = "Black";
+                console.log(old.id.charAt(0) == "p" & old.id.charAt(2) != info.id.charAt(1) + 1 & old.id.charAt(2) != info.id.charAt(1) - 1);
+
+                if (old.id.charAt(0) == "p" & old.id.charAt(2) == info.id.charAt(1) + 2 & old.id.charAt(2) == info.id.charAt(1) - 2) {old.name = "yup"};
+                if (old.id.charAt(0) == "P" & old.id.charAt(2) == info.id.charAt(1) + 2 & old.id.charAt(2) == info.id.charAt(1) - 2) {old.name = "yup"};
+                
+                old.id = old.id.charAt(0) + info.id;
+
+                if (turn == "White") { //White
+                    turn = "Black";
+                }
+                else if (turn == "Black") { //Black
+                    turn = "White";
+                }
+
+                old = "";
+
+                select = false;
+
+                for (let n = 0; n < highlighted.length; n++) {
+                    document.getElementById(highlighted[n]).className = document.getElementById(highlighted[n]).className.substring(0, 19);
+                }
+                
+                highlighted = [];
             }
-            else if (turn == "Black") { //Black
-                turn = "White";
+            if (passant.includes(info.id)) {
+                info.appendChild(old);
+
+                old.id = old.id.charAt(0) + info.id;
+
+                if (turn == "White") { //White
+                    turn = "Black";
+                }
+                else if (turn == "Black") { //Black
+                    turn = "White";
+                }
+
+                old = "";
+
+                select = false;
+
+                for (let n = 0; n < passant.length; n++) {
+                    document.getElementById(passant[n]).className = document.getElementById(passant[n]).className.substring(0, 19);
+                }
+                
+                passant = [];
+
+                for (let n = 0; n < highlighted.length; n++) {
+                    document.getElementById(highlighted[n]).className = document.getElementById(highlighted[n]).className.substring(0, 19);
+                }
+                
+                highlighted = [];
             }
-
-            old = "";
-
-            select = false;
-
-            for (let n = 0; n < highlighted.length; n++) {
-                document.getElementById(highlighted[n]).className = document.getElementById(highlighted[n]).className.substring(0, 19);
-            }
-            
-            highlighted = [];
         }
     }
 }
 //-------------------en passant not done
+
+function pawnMovement(t, j=highlighted.length) { // side = movement direction 
+    let z = 0;
+    let val = 0;
+    
+    let ls = (turn == "White") ? w : b;
+
+    let side = (ls == w) ? 1 : -1;
+
+    if (parseInt(t.id.charAt(2)) != 8 & parseInt(t.id.charAt(2)) != 0 ) { //check board top/bottom
+        z = t.id.charAt(1) + `${parseInt(t.id.charAt(2)) + side}`;
+        if (document.getElementById(z).childElementCount == 0) {
+            highlighted[j] = z;
+            document.getElementById(highlighted[j]).className += " viable";
+            j++;
+        }
+    }
+    
+    val = ((side == 1) ? 2 : 7);
+    if (t.id.charAt(2) == val) {
+        z = t.id.charAt(1) + `${parseInt(t.id.charAt(2)) + side*2}`;
+        if (document.getElementById(z).childElementCount == 0) {
+            highlighted[j] = z;
+            document.getElementById(highlighted[j]).className += " viable";
+            j++;
+        }
+    }
+
+    val = ((side == 1) ? 5 : 4);
+    if (lets.indexOf(t.id.charAt(1)) != 7) {///////////////////
+        z = lets[lets.indexOf(t.id.charAt(1))+1] + `${parseInt(t.id.charAt(2)) + side}`;
+        if (document.getElementById(z).childElementCount == 1) {
+            if (!ls.includes(document.getElementById(z).childNodes[0].id.charAt(0))) {
+                highlighted[j] = z;
+                document.getElementById(highlighted[j]).className += " viable";
+                j++;
+            }
+        }
+        z = lets[lets.indexOf(t.id.charAt(1))+1] + `${parseInt(t.id.charAt(2))}`;//en passant
+        if (document.getElementById(z).childElementCount == 1) {
+            if (!ls.includes(document.getElementById(z).childNodes[0].id.charAt(0)) & document.getElementById(z).childNodes[0].name == "yup") {
+                z = lets[lets.indexOf(t.id.charAt(1))+1] + `${parseInt(t.id.charAt(2)) + side}`;
+                if (document.getElementById(z).childElementCount == 0 & t.id.charAt(2) == val) {
+                    passant[passant.length] = z;
+                    document.getElementById(passant[passant.length-1]).className += " viable";
+                    j++;
+                }
+            }
+        }
+    }
+
+    if (lets.indexOf(t.id.charAt(1)) != 0) {
+        z = lets[lets.indexOf(t.id.charAt(1))-1] + `${parseInt(t.id.charAt(2)) + side}`;
+        if (document.getElementById(z).childElementCount == 1) {
+            if (!ls.includes(document.getElementById(z).childNodes[0].id.charAt(0))) {
+                highlighted[j] = z;
+                document.getElementById(highlighted[j]).className += " viable";
+                j++;
+            }
+        }
+        z = lets[lets.indexOf(t.id.charAt(1))-1] + `${parseInt(t.id.charAt(2))}`;//en passant
+        if (document.getElementById(z).childElementCount == 1) {
+            if (!ls.includes(document.getElementById(z).childNodes[0].id.charAt(0)) & document.getElementById(z).childNodes[0].name == "yup") {
+                z = lets[lets.indexOf(t.id.charAt(1))-1] + `${parseInt(t.id.charAt(2)) + side}`;
+                if (document.getElementById(z).childElementCount == 0 & t.id.charAt(2) == val) {
+                    passant[passant.length] = z;
+                    document.getElementById(passant[passant.length]).className += " viable";
+                    j++;
+                }
+            }
+        }
+    }
+}
 
 function rookMovement(t, j=highlighted.length) {
     let z = 0;
@@ -355,7 +482,92 @@ function bishopMovement(t, j=highlighted.length) {
 }
 
 function kingMovement(t, j=highlighted.length) {
-    null;
+    let z = 0;
+    let ls = "";
+    let long = lets.indexOf(t.id.charAt(1));
+    let lat = parseInt(t.id.charAt(2));
+
+    ls = (w.includes(t.id.charAt(0))) ? b : w;
+    
+
+    if (lat != 8 & long != 0) { //----------------up-left
+        z = lets[long - 1] + `${lat + 1}`;
+        movement(z, ls);
+    }
+    if (lat != 1 & long != 7) { //-------------------down-right
+        z = lets[long + 1] + `${lat - 1}`;
+        movement(z, ls);
+    }
+    if (lat != 8 & long != 7) { //----------------up-right
+        z = lets[long + 1] + `${lat + 1}`;
+        movement(z, ls);
+    }
+    if (lat != 1 & long != 0) { //-------------------down-left
+        z = lets[long - 1] + `${lat - 1}`;
+        movement(z, ls);
+    }
+    if (lat != 1) {//--------------down
+        z = lets[long] + `${lat-1}`;
+        movement(z, ls);
+    }
+    if (lat != 8) {//------------up
+        z = lets[long] + `${lat+1}`;
+        movement(z, ls);
+    }
+    if (long != 0) {//--------------left
+        z = lets[long-1] + `${lat}`;
+        movement(z, ls);
+    }
+    if (long != 7) {//------------right
+        z = lets[long+1] + `${lat}`;
+        movement(z, ls);
+    }
+}
+
+function knightMovement(t, j=highlighted.length) {
+    let z = 0;
+    let ls = "";
+    let long = lets.indexOf(t.id.charAt(1));
+    let lat = parseInt(t.id.charAt(2));
+
+    ls = (w.includes(t.id.charAt(0))) ? b : w;
+    
+
+    if (lat < 7 & long > 0) { //----------------up-left
+        z = lets[long - 1] + `${lat + 2}`;
+        movement(z, ls);
+    }
+    console.log([lat < 7, long < 7, lat, long]);
+    if (lat < 7 & long < 7) { //----------------up-right
+        z = lets[long + 1] + `${lat + 2}`;
+        movement(z, ls);
+    }
+
+    if (lat < 8 & long > 1) { //----------------left-up
+        z = lets[long - 2] + `${lat + 1}`;
+        movement(z, ls);
+    }
+    if (lat < 8 & long < 6) { //----------------right-up
+        z = lets[long + 2] + `${lat + 1}`;
+        movement(z, ls);
+    }
+
+    if (lat > 2 & long > 0) { //----------------down-left
+        z = lets[long - 1] + `${lat - 2}`;
+        movement(z, ls);
+    }
+    if (lat > 2 & long < 7) { //----------------down-right
+        z = lets[long + 1] + `${lat - 2}`;
+        movement(z, ls);
+    }
+    if (lat > 1 & long > 1) { //----------------left-down
+        z = lets[long - 2] + `${lat - 1}`;
+        movement(z, ls);
+    }
+    if (lat > 1 & long < 6) { //----------------right-down
+        z = lets[long + 2] + `${lat - 1}`;
+        movement(z, ls);
+    }
 }
 
 function queenMovement(t, j=highlighted.length) {
