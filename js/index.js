@@ -18,6 +18,26 @@ const Queen = 6;
 const White = 8;
 const Black = 16;
 
+let old = "";
+let select = false;
+let turn = "";
+let highlighted = [];
+let passant = [];
+let passantPiece = [];
+
+const movementTypes = {"P" :  'pawnMovement',
+                            "p" :  'pawnMovement',
+                            "R" : 'rookMovement',
+                            "r" : 'rookMovement',
+                            "B" : 'bishopMovement',
+                            "b" : 'bishopMovement',
+                            "Q" : 'queenMovement',
+                            "q" : 'queenMovement',
+                            "K" : 'kingMovement',
+                            "k" : 'kingMovement',
+                            'N' : 'knightMovement',
+                            'n' : 'knightMovement'};
+
 const pieces = {k: King | Black,
                 K: King | White,
                 p: Pawn | Black,
@@ -38,10 +58,19 @@ function gen() {
         board[n] = None;
     }
 
-    let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR";
-    //let fen = "8/8/8/3N4/4n3/8/8/8";
+    //let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w - - 0 0";
+    let fen = "r3k2r/8/8/8/8/8/8/R3K2R w - - 0 0";
     let x = 0;
     let y = 0;
+
+    if (fen.includes(" w ")) {
+        turn = "White";
+    }
+    else {
+        turn = "Black";
+    }
+
+    document.getElementById('turn').innerText = 'Turn: ' + turn;
 
     for (let i = 0; i < fen.length; i++) {
         board[y*8+x] = pieces[fen[i]];
@@ -170,12 +199,6 @@ function updatePieces() {
     }
 }
 
-let old = "";
-let select = false;
-let turn = "White";
-let highlighted = [];
-let passant = [];
-
 function selectPiece() {
     let t = event.srcElement;
     let ls = (turn == "White") ? w : b ;
@@ -229,19 +252,6 @@ function selectPiece() {
     }
 }
 
-const movementTypes = {"P" :  'pawnMovement',
-                            "p" :  'pawnMovement',
-                            "R" : 'rookMovement',
-                            "r" : 'rookMovement',
-                            "B" : 'bishopMovement',
-                            "b" : 'bishopMovement',
-                            "Q" : 'queenMovement',
-                            "q" : 'queenMovement',
-                            "K" : 'kingMovement',
-                            "k" : 'kingMovement',
-                            'N' : 'knightMovement',
-                            'n' : 'knightMovement'};
-
 function pieceHandeler(ls, t) {
     if (ls.includes(t.id.charAt(0))) {
         for (let n = 0; n < highlighted.length; n++) {
@@ -268,13 +278,23 @@ function move() {
         var info = event.srcElement;
         
         if (info.id.substr(1) != old.id.substr(1)) {
+
             if (highlighted.includes(info.id)) {
+                
+                for (let n = 0;n < 8;n++) {
+                    if (document.getElementById(lets[n]+"5").childElementCount == 1) {document.getElementById(lets[n]+"5").childNodes[0].name = ""};
+                    if (document.getElementById(lets[n]+"4").childElementCount == 1) {document.getElementById(lets[n]+"4").childNodes[0].name = ""};
+                }
+
                 info.appendChild(old);
 
-                console.log(old.id.charAt(0) == "p" & old.id.charAt(2) != info.id.charAt(1) + 1 & old.id.charAt(2) != info.id.charAt(1) - 1);
+                let vara = [parseInt(old.id.charAt(2)),  parseInt(info.id.charAt(1))];
 
-                if (old.id.charAt(0) == "p" & old.id.charAt(2) == info.id.charAt(1) + 2 & old.id.charAt(2) == info.id.charAt(1) - 2) {old.name = "yup"};
-                if (old.id.charAt(0) == "P" & old.id.charAt(2) == info.id.charAt(1) + 2 & old.id.charAt(2) == info.id.charAt(1) - 2) {old.name = "yup"};
+                if (old.id.charAt(0) == "p" | old.id.charAt(0) == "P") {
+                    if (vara[0] == vara[1] + 2 | vara[0] == vara[1] - 2) {
+                        old.name = "yup"
+                    }
+                }
                 
                 old.id = old.id.charAt(0) + info.id;
 
@@ -284,6 +304,8 @@ function move() {
                 else if (turn == "Black") { //Black
                     turn = "White";
                 }
+
+                document.getElementById('turn').innerText = 'Turn: ' + turn;
 
                 old = "";
 
@@ -297,6 +319,11 @@ function move() {
             }
             if (passant.includes(info.id)) {
                 info.appendChild(old);
+                for (let n = 0; n < passantPiece.length; n++) {
+                    if (passantPiece[n].id.charAt(1) == info.id.charAt(0)) {
+                        document.getElementById(passantPiece[n].id.substr(1)).removeChild(passantPiece[n]);
+                    }
+                }
 
                 old.id = old.id.charAt(0) + info.id;
 
@@ -306,6 +333,8 @@ function move() {
                 else if (turn == "Black") { //Black
                     turn = "White";
                 }
+
+                document.getElementById('turn').innerText = 'Turn: ' + turn;
 
                 old = "";
 
@@ -365,14 +394,20 @@ function pawnMovement(t, j=highlighted.length) { // side = movement direction
                 j++;
             }
         }
+
+        passantPiece = [];
+
         z = lets[lets.indexOf(t.id.charAt(1))+1] + `${parseInt(t.id.charAt(2))}`;//en passant
         if (document.getElementById(z).childElementCount == 1) {
             if (!ls.includes(document.getElementById(z).childNodes[0].id.charAt(0)) & document.getElementById(z).childNodes[0].name == "yup") {
+                passantPiece[passantPiece.length] = document.getElementById(z).childNodes[0];
                 z = lets[lets.indexOf(t.id.charAt(1))+1] + `${parseInt(t.id.charAt(2)) + side}`;
                 if (document.getElementById(z).childElementCount == 0 & t.id.charAt(2) == val) {
                     passant[passant.length] = z;
-                    document.getElementById(passant[passant.length-1]).className += " viable";
-                    j++;
+                    document.getElementById(z).className += " viable";
+                }
+                else {
+                    passantPiece[passantPiece.length-1] = "";
                 }
             }
         }
@@ -393,8 +428,7 @@ function pawnMovement(t, j=highlighted.length) { // side = movement direction
                 z = lets[lets.indexOf(t.id.charAt(1))-1] + `${parseInt(t.id.charAt(2)) + side}`;
                 if (document.getElementById(z).childElementCount == 0 & t.id.charAt(2) == val) {
                     passant[passant.length] = z;
-                    document.getElementById(passant[passant.length]).className += " viable";
-                    j++;
+                    document.getElementById(z).className += " viable";
                 }
             }
         }
@@ -487,6 +521,8 @@ function kingMovement(t, j=highlighted.length) {
     let long = lets.indexOf(t.id.charAt(1));
     let lat = parseInt(t.id.charAt(2));
 
+    let side = (ls == w) ? 1 : -1;
+
     ls = (w.includes(t.id.charAt(0))) ? b : w;
     
 
@@ -522,6 +558,16 @@ function kingMovement(t, j=highlighted.length) {
         z = lets[long+1] + `${lat}`;
         movement(z, ls);
     }
+
+    if (side == -1) {
+        z = lets[6] + "1";
+        highlighted[highlighted.length] = z;
+        document.getElementById(z).className += " viable";
+        z = lets[2] + "1";
+        highlighted[highlighted.length] = z;
+        document.getElementById(z).className += " viable";
+    }
+    ///castling
 }
 
 function knightMovement(t, j=highlighted.length) {
@@ -537,7 +583,6 @@ function knightMovement(t, j=highlighted.length) {
         z = lets[long - 1] + `${lat + 2}`;
         movement(z, ls);
     }
-    console.log([lat < 7, long < 7, lat, long]);
     if (lat < 7 & long < 7) { //----------------up-right
         z = lets[long + 1] + `${lat + 2}`;
         movement(z, ls);
