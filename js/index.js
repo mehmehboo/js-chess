@@ -1,4 +1,3 @@
-
 let board = [];
 
 let lets = "abcdefgh".split("");
@@ -24,6 +23,12 @@ let turn = "";
 let highlighted = [];
 let passant = [];
 let passantPiece = [];
+let castlePiece = [];
+let castleRight = "";
+
+let checks = "";
+let invalid = "";
+let kingPos = [];
 
 const movementTypes = {"P" :  'pawnMovement',
                             "p" :  'pawnMovement',
@@ -58,8 +63,8 @@ function gen() {
         board[n] = None;
     }
 
-    //let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w - - 0 0";
-    let fen = "r3k2r/8/8/8/8/8/8/R3K2R w - - 0 0";
+    //let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq 0 0";
+    let fen = "7p/8/8/3k4/4K3/8/8/P7 w - - 0 0";
     let x = 0;
     let y = 0;
 
@@ -69,6 +74,8 @@ function gen() {
     else {
         turn = "Black";
     }
+    //improve later
+    if (fen.includes(" KQkq ")) {castleRight = "KQkq"}
 
     document.getElementById('turn').innerText = 'Turn: ' + turn;
 
@@ -157,11 +164,13 @@ function updatePieces() {
             else if (board[n] == (King | White)) {
                 piece.src = "media/king-white.png";
                 piece.id = "K" + id;
+                kingPos[0] = piece.id;
             }
 
             else if (board[n] == (King | Black)) {
                 piece.src = "media/king-black.png";
                 piece.id = "k" + id;
+                kingPos[1] = piece.id;
             }
 
             else if (board[n] == (Queen | White)) {
@@ -280,11 +289,28 @@ function move() {
         if (info.id.substr(1) != old.id.substr(1)) {
 
             if (highlighted.includes(info.id)) {
+                for (let n = 0; n < invalid.length; n++) {
+                    document.getElementById(invalid[n]).className = document.getElementById(invalid[n]).className.substring(0, 19);
+                }
+                
+                invalid = [];
+
+                console.log(kingPos);
+
+                lookForChecks(document.getElementById(kingPos[0]));
+                lookForChecks(document.getElementById(kingPos[1]));
+
+                console.log(invalid);
                 
                 for (let n = 0;n < 8;n++) {
                     if (document.getElementById(lets[n]+"5").childElementCount == 1) {document.getElementById(lets[n]+"5").childNodes[0].name = ""};
                     if (document.getElementById(lets[n]+"4").childElementCount == 1) {document.getElementById(lets[n]+"4").childNodes[0].name = ""};
                 }
+
+                if (old.id == "Ra1") {castleRight = castleRight.replace("Q", "")};
+                if (old.id == "Rh1") {castleRight = castleRight.replace("K", "")};
+                if (old.id == "rq8") {castleRight = castleRight.replace("q", "")};
+                if (old.id == "rh8") {castleRight = castleRight.replace("k", "")};
 
                 info.appendChild(old);
 
@@ -294,6 +320,35 @@ function move() {
                     if (vara[0] == vara[1] + 2 | vara[0] == vara[1] - 2) {
                         old.name = "yup"
                     }
+                }
+
+                if (old.id.charAt(0) == "k") {
+                    if (lets.indexOf(info.id.charAt(0))+1 < lets.indexOf(old.id.charAt(1))) {
+                        if (castlePiece.includes(document.getElementById("a"+old.id.charAt(2)))) {
+                            document.getElementById("d"+old.id.charAt(2)).appendChild(document.getElementById("ra"+old.id.charAt(2)));
+                        }
+                    }
+                    else if (lets.indexOf(info.id.charAt(0)) > lets.indexOf(old.id.charAt(1))+1) {
+                        if (castlePiece.includes(document.getElementById("h"+old.id.charAt(2)))) {
+                            document.getElementById("f"+old.id.charAt(2)).appendChild(document.getElementById("rh"+old.id.charAt(2)));
+                        }
+                    }
+                    castleRight = castleRight.replace("kq", "");
+                    kingPos[1] = old.id;
+                }
+                if (old.id.charAt(0) == "K") {
+                    if (lets.indexOf(info.id.charAt(0))+1 < lets.indexOf(old.id.charAt(1))) {
+                        if (castlePiece.includes(document.getElementById("a"+old.id.charAt(2)))) {
+                            document.getElementById("d"+old.id.charAt(2)).appendChild(document.getElementById("Ra"+old.id.charAt(2)));
+                        }
+                    }
+                    else if (lets.indexOf(info.id.charAt(0)) > lets.indexOf(old.id.charAt(1))+1) {
+                        if (castlePiece.includes(document.getElementById("h"+old.id.charAt(2)))) {
+                            document.getElementById("f"+old.id.charAt(2)).appendChild(document.getElementById("Rh"+old.id.charAt(2)));
+                        }
+                    }
+                    castleRight = castleRight.replace("KQ", "");
+                    kingPos[0] = old.id;
                 }
                 
                 old.id = old.id.charAt(0) + info.id;
@@ -317,6 +372,7 @@ function move() {
                 
                 highlighted = [];
             }
+
             if (passant.includes(info.id)) {
                 info.appendChild(old);
                 for (let n = 0; n < passantPiece.length; n++) {
@@ -521,10 +577,9 @@ function kingMovement(t, j=highlighted.length) {
     let long = lets.indexOf(t.id.charAt(1));
     let lat = parseInt(t.id.charAt(2));
 
-    let side = (ls == w) ? 1 : -1;
-
     ls = (w.includes(t.id.charAt(0))) ? b : w;
     
+    let side = (ls == w) ? 1 : -1;
 
     if (lat != 8 & long != 0) { //----------------up-left
         z = lets[long - 1] + `${lat + 1}`;
@@ -559,13 +614,58 @@ function kingMovement(t, j=highlighted.length) {
         movement(z, ls);
     }
 
+    castlePiece = [];
+
+    ///////////////
     if (side == -1) {
-        z = lets[6] + "1";
-        highlighted[highlighted.length] = z;
-        document.getElementById(z).className += " viable";
-        z = lets[2] + "1";
-        highlighted[highlighted.length] = z;
-        document.getElementById(z).className += " viable";
+        if (document.getElementById("b1").childElementCount == 0) {
+            if (document.getElementById("c1").childElementCount == 0) {
+                if (document.getElementById("d1").childElementCount == 0 & castleRight.includes("Q")) {
+                    z = lets[2] + "1";
+                    highlighted[highlighted.length] = z;
+                    document.getElementById(z).className += " viable";
+    
+                    z = lets[0] + "1";
+                    castlePiece[castlePiece.length] = document.getElementById(z);
+                }
+            }
+        }
+
+        if (document.getElementById("f1").childElementCount == 0) {
+            if (document.getElementById("g1").childElementCount == 0 & castleRight.includes("K")) {
+                z = lets[6] + "1";
+                highlighted[highlighted.length] = z;
+                document.getElementById(z).className += " viable";
+        
+                z = lets[7] + "1";
+                castlePiece[castlePiece.length] = document.getElementById(z);
+            }
+        }
+    }
+    else if (side == 1) {
+        if (document.getElementById("b8").childElementCount == 0) {
+            if (document.getElementById("c8").childElementCount == 0) {
+                if (document.getElementById("d8").childElementCount == 0 & castleRight.includes("q")) {
+                    z = lets[2] + "8";
+                    highlighted[highlighted.length] = z;
+                    document.getElementById(z).className += " viable";
+    
+                    z = lets[0] + "8";
+                    castlePiece[castlePiece.length] = document.getElementById(z);
+                }
+            }
+        }
+
+        if (document.getElementById("f8").childElementCount == 0) {
+            if (document.getElementById("g8").childElementCount == 0 & castleRight.includes("k")) {
+                z = lets[6] + "8";
+                highlighted[highlighted.length] = z;
+                document.getElementById(z).className += " viable";
+        
+                z = lets[7] + "8";
+                castlePiece[castlePiece.length] = document.getElementById(z);
+            }
+        }
     }
     ///castling
 }
@@ -635,4 +735,94 @@ function movement(z, ls) {
         return 1;
     }
     return 0;
+}
+
+    
+
+function lookForChecks(t) {
+    let z = 0;
+    let ls = "";
+    let long = lets.indexOf(t.id.charAt(1));
+    let lat = parseInt(t.id.charAt(2));
+
+    ls = (w.includes(t.id.charAt(0))) ? b : w;
+    
+
+    if (lat < 7 & long > 0) { //----------------up-left
+        z = lets[long - 1] + `${lat + 2}`;
+        invalid[invalid.length] = z;
+    }
+    if (lat < 7 & long < 7) { //----------------up-right
+        z = lets[long + 1] + `${lat + 2}`;
+        invalid[invalid.length] = z;
+    }
+
+    if (lat < 8 & long > 1) { //----------------left-up
+        z = lets[long - 2] + `${lat + 1}`;
+        invalid[invalid.length] = z;
+    }
+    if (lat < 8 & long < 6) { //----------------right-up
+        z = lets[long + 2] + `${lat + 1}`;
+        invalid[invalid.length] = z;
+    }
+
+    if (lat > 2 & long > 0) { //----------------down-left
+        z = lets[long - 1] + `${lat - 2}`;
+        invalid[invalid.length] = z;
+    }
+    if (lat > 2 & long < 7) { //----------------down-right
+        z = lets[long + 1] + `${lat - 2}`;
+        invalid[invalid.length] = z;
+    }
+    if (lat > 1 & long > 1) { //----------------left-down
+        z = lets[long - 2] + `${lat - 1}`;
+        invalid[invalid.length] = z;
+    }
+    if (lat > 1 & long < 6) { //----------------right-down
+        z = lets[long + 2] + `${lat - 1}`;
+        invalid[invalid.length] = z;
+    }
+
+    for (let n = 1; n < 8; n++) { //----------------up-left--------------------------------------
+        if (long-n == -1) break;
+        if (lat+n == 9) break;
+
+        z = lets[long - n] + `${lat + n}`;
+    }
+    for (let n = 1; n < 8; n++) { //----------------down-right
+        if (lat-n == 0) break;
+        if (long+n == 8) break;
+
+        z = lets[long + n] + `${lat - n}`;
+    }
+
+    for (let n = 1; n < 8; n++) { //----------------up-right
+        if (long+n == 8) break;
+        if (lat+n == 9) break;
+
+        z = lets[long + n] + `${lat + n}`;
+    }
+    for (let n = 1; n < 8; n++) { //----------------down-left-----------------------------------------
+        if (lat-n == 0) break;
+        if (long-n == -1) break;
+
+        z = lets[long - n] + `${lat - n}`;
+    }
+    for (let n = 1; n < (9-lat); n++) { //----------------up
+        z = t.id.charAt(1) + `${lat + n}`;
+    }
+    for (let n = 1; n < 8; n++) { //------------down
+        if (lat-n == 0) break;
+        z = t.id.charAt(1) + `${lat - n}`;
+    }
+
+    for (let n = 1; n < 8; n++) { //---------left
+        if (long-n == -1) break;
+        z = lets[long-n] + `${lat}`;
+    }
+
+    for (let n = 1; n < 8; n++) {//----------------right
+        if (long+n == 8) break;
+        z = lets[long+n] + `${lat}`;
+    }
 }
